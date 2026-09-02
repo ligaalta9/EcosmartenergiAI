@@ -1,158 +1,253 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Building Dashboard - SMKN 4 Bandung</title>
+    <title>Smart Building IoT - SMKN 4 Bandung</title>
     
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
     
     <!-- Paho MQTT CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+
+    <!-- Background Decorative Glows -->
+    <div class="fixed top-0 -left-40 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed top-1/2 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
     <!-- Header / Navbar -->
-    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
-        <div>
-            <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                ⚡ Smart Building IoT Dashboard
-            </h1>
-            <p class="text-xs text-slate-400">Monitoring Listrik, Air & Kontrol Pompa Automatis</p>
-        </div>
-        
-        <!-- Status Indikator MQTT -->
-        <div id="mqttStatus" class="flex items-center gap-2 text-xs text-red-400 font-semibold bg-red-950/40 border border-red-800/50 px-3 py-1.5 rounded-full">
-            <span class="w-2 h-2 rounded-full bg-red-500"></span>
-            Terputus
+    <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl shadow-lg shadow-indigo-500/25">
+                    <i data-lucide="zap" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+                        Smart Building IoT
+                        <span class="text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">v2.5</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium">SMK Negeri 4 Bandung • Telemetri & AI Control</p>
+                </div>
+            </div>
+            
+            <!-- MQTT Connection Status Badge -->
+            <div id="mqttStatus" class="flex items-center gap-2 text-xs text-red-400 font-medium bg-red-950/40 border border-red-800/50 px-3.5 py-1.5 rounded-full shadow-inner transition-all duration-300">
+                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                <span>Terputus</span>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6 space-y-6">
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
 
-        <!-- Grid Ruangan & Telemetri -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- GRID 1: Telemetri Ruangan & Air -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
-            <!-- Ruang 1: Daya Listrik (PZEM-004T #1) -->
-            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-md font-semibold text-slate-200">⚡ Ruang 1 (TAV-1)</h2>
-                    <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded">PZEM 1</span>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Tegangan</p>
-                        <p class="text-lg font-bold text-emerald-400"><span id="r1_voltage">0</span> V</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Arus</p>
-                        <p class="text-lg font-bold text-amber-400"><span id="r1_current">0</span> A</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Daya</p>
-                        <p class="text-lg font-bold text-cyan-400"><span id="r1_power">0</span> W</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Total Energi</p>
-                        <p class="text-lg font-bold text-indigo-400"><span id="r1_energy">0</span> kWh</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Ruang 2: Daya Listrik (PZEM-004T #2) -->
-            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-md font-semibold text-slate-200">⚡ Ruang 2 (TAV-2)</h2>
-                    <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded">PZEM 2</span>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Tegangan</p>
-                        <p class="text-lg font-bold text-emerald-400"><span id="r2_voltage">0</span> V</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Arus</p>
-                        <p class="text-lg font-bold text-amber-400"><span id="r2_current">0</span> A</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Daya</p>
-                        <p class="text-lg font-bold text-cyan-400"><span id="r2_power">0</span> W</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                        <p class="text-xs text-slate-400">Total Energi</p>
-                        <p class="text-lg font-bold text-indigo-400"><span id="r2_energy">0</span> kWh</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tangki Air & Ketinggian (HC-SR04) -->
-            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-md font-semibold text-slate-200">💧 Tangki Air Utama</h2>
-                    <span class="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded">HC-SR04</span>
-                </div>
-                <div class="space-y-3">
-                    <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-800 flex justify-between items-center">
+            <!-- Card Ruang 1 (PZEM-004T #1) -->
+            <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-5 shadow-xl transition-all duration-300 backdrop-blur-md group">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
+                            <i data-lucide="cpu" class="w-5 h-5"></i>
+                        </div>
                         <div>
-                            <p class="text-xs text-slate-400">Jarak Sensor - Air</p>
-                            <p class="text-2xl font-extrabold text-blue-400"><span id="water_level">0</span> cm</p>
-                        </div>
-                        <div id="pump_badge" class="text-xs px-3 py-1 rounded-full font-medium bg-slate-800 text-slate-400">
-                            Pompa: Standby
+                            <h2 class="text-sm font-semibold text-slate-200">Ruang 1 (TAV 1)</h2>
+                            <p class="text-[11px] text-slate-400">PZEM-004T Meter #1</p>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500 italic">
-                        * Otomatisasi: ON saat $\ge 10\text{ cm}$, OFF saat $\le 6\text{ cm}$.
-                    </p>
+                    <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2.5 py-0.5 rounded-full">ONLINE</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-400"></i> Tegangan</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r1_voltage">0</span> <span class="text-xs font-normal text-slate-400">V</span></p>
+                    </div>
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Arus</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r1_current">0</span> <span class="text-xs font-normal text-slate-400">A</span></p>
+                    </div>
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="gauge" class="w-3.5 h-3.5 text-cyan-400"></i> Daya</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r1_power">0</span> <span class="text-xs font-normal text-slate-400">W</span></p>
+                    </div>
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="battery-charging" class="w-3.5 h-3.5 text-indigo-400"></i> Energi</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r1_energy">0</span> <span class="text-xs font-normal text-slate-400">kWh</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Ruang 2 (PZEM-004T #2) -->
+            <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-5 shadow-xl transition-all duration-300 backdrop-blur-md group">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
+                            <i data-lucide="cpu" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-semibold text-slate-200">Ruang 2 (TAV 2)</h2>
+                            <p class="text-[11px] text-slate-400">PZEM-004T Meter #2</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2.5 py-0.5 rounded-full">ONLINE</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-400"></i> Tegangan</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r2_voltage">0</span> <span class="text-xs font-normal text-slate-400">V</span></p>
+                    </div>
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Arus</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r2_current">0</span> <span class="text-xs font-normal text-slate-400">A</span></p>
+                    </div>
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="gauge" class="w-3.5 h-3.5 text-cyan-400"></i> Daya</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r2_power">0</span> <span class="text-xs font-normal text-slate-400">W</span></p>
+                    </div>
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700/50 transition">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5"><i data-lucide="battery-charging" class="w-3.5 h-3.5 text-indigo-400"></i> Energi</span>
+                        <p class="text-xl font-bold text-slate-100 mt-1"><span id="r2_energy">0</span> <span class="text-xs font-normal text-slate-400">kWh</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Tangki Air Visual & Status Pompa (HC-SR04) -->
+            <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-5 shadow-xl transition-all duration-300 backdrop-blur-md flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 border border-blue-500/20">
+                                <i data-lucide="droplets" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-semibold text-slate-200">Tangki Air Utama</h2>
+                                <p class="text-[11px] text-slate-400">HC-SR04 Ultrasonic Sensor</p>
+                            </div>
+                        </div>
+                        <span id="pump_badge" class="text-[11px] font-medium px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            STANDBY
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <p class="text-xs text-slate-400">Jarak Sensor ke Air</p>
+                                <p class="text-3xl font-extrabold text-blue-400 mt-1"><span id="water_level">0</span> <span class="text-sm font-medium text-slate-400">cm</span></p>
+                            </div>
+                            <div class="p-2.5 bg-blue-500/10 rounded-full border border-blue-500/20 text-blue-400">
+                                <i data-lucide="waves" class="w-6 h-6"></i>
+                            </div>
+                        </div>
+                        <!-- Visual Level Bar -->
+                        <div class="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                            <div id="water_bar" class="bg-gradient-to-r from-blue-600 to-cyan-400 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-800/60 flex items-center gap-2 text-[11px] text-slate-400">
+                    <i data-lucide="info" class="w-4 h-4 text-blue-400 flex-shrink-0"></i>
+                    <span>Sistem Otomatis: ON $\ge 10\text{ cm}$, OFF $\le 6\text{ cm}$.</span>
                 </div>
             </div>
 
         </div>
 
-        <!-- Section Relay Controls -->
-        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
-            <h2 class="text-md font-semibold text-slate-200">🎛️ Kontrol Relay (5 Ch)</h2>
+        <!-- GRID 2: Relay Switches 5 Channel -->
+        <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+            <div class="flex items-center gap-2.5 mb-5">
+                <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="sliders" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-semibold text-slate-200">Kontrol Relay & Beban Listrik (5 Ch)</h2>
+                    <p class="text-[11px] text-slate-400">Kontrol sakelar jarak jauh via MQTT Protocol</p>
+                </div>
+            </div>
+
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                <button onclick="toggleRelay(1)" id="relay1_btn" class="bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-lg border border-slate-600 transition flex flex-col items-center gap-1">
-                    <span class="text-xs font-semibold">Relay 1</span>
-                    <span id="relay1_status" class="text-xs font-bold text-slate-400">OFF</span>
+                <button onclick="toggleRelay(1)" id="relay1_btn" class="relay-card bg-slate-950/80 hover:bg-slate-800/60 border border-slate-800 p-4 rounded-xl transition-all duration-200 flex flex-col items-center gap-3 group">
+                    <div class="p-2.5 bg-slate-900 rounded-xl group-hover:bg-slate-800 transition border border-slate-800"><i data-lucide="power" class="w-5 h-5 text-slate-400 relay-icon"></i></div>
+                    <span class="text-xs font-medium text-slate-300">Relay 1</span>
+                    <span id="relay1_status" class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-800">OFF</span>
                 </button>
-                <button onclick="toggleRelay(2)" id="relay2_btn" class="bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-lg border border-slate-600 transition flex flex-col items-center gap-1">
-                    <span class="text-xs font-semibold">Relay 2</span>
-                    <span id="relay2_status" class="text-xs font-bold text-slate-400">OFF</span>
+
+                <button onclick="toggleRelay(2)" id="relay2_btn" class="relay-card bg-slate-950/80 hover:bg-slate-800/60 border border-slate-800 p-4 rounded-xl transition-all duration-200 flex flex-col items-center gap-3 group">
+                    <div class="p-2.5 bg-slate-900 rounded-xl group-hover:bg-slate-800 transition border border-slate-800"><i data-lucide="power" class="w-5 h-5 text-slate-400 relay-icon"></i></div>
+                    <span class="text-xs font-medium text-slate-300">Relay 2</span>
+                    <span id="relay2_status" class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-800">OFF</span>
                 </button>
-                <button onclick="toggleRelay(3)" id="relay3_btn" class="bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-lg border border-slate-600 transition flex flex-col items-center gap-1">
-                    <span class="text-xs font-semibold">Relay 3</span>
-                    <span id="relay3_status" class="text-xs font-bold text-slate-400">OFF</span>
+
+                <button onclick="toggleRelay(3)" id="relay3_btn" class="relay-card bg-slate-950/80 hover:bg-slate-800/60 border border-slate-800 p-4 rounded-xl transition-all duration-200 flex flex-col items-center gap-3 group">
+                    <div class="p-2.5 bg-slate-900 rounded-xl group-hover:bg-slate-800 transition border border-slate-800"><i data-lucide="power" class="w-5 h-5 text-slate-400 relay-icon"></i></div>
+                    <span class="text-xs font-medium text-slate-300">Relay 3</span>
+                    <span id="relay3_status" class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-800">OFF</span>
                 </button>
-                <button onclick="toggleRelay(4)" id="relay4_btn" class="bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-lg border border-slate-600 transition flex flex-col items-center gap-1">
-                    <span class="text-xs font-semibold">Relay 4</span>
-                    <span id="relay4_status" class="text-xs font-bold text-slate-400">OFF</span>
+
+                <button onclick="toggleRelay(4)" id="relay4_btn" class="relay-card bg-slate-950/80 hover:bg-slate-800/60 border border-slate-800 p-4 rounded-xl transition-all duration-200 flex flex-col items-center gap-3 group">
+                    <div class="p-2.5 bg-slate-900 rounded-xl group-hover:bg-slate-800 transition border border-slate-800"><i data-lucide="power" class="w-5 h-5 text-slate-400 relay-icon"></i></div>
+                    <span class="text-xs font-medium text-slate-300">Relay 4</span>
+                    <span id="relay4_status" class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-800">OFF</span>
                 </button>
-                <button onclick="toggleRelay(5)" id="relay5_btn" class="bg-slate-700 hover:bg-slate-600 text-white p-3 rounded-lg border border-slate-600 transition flex flex-col items-center gap-1">
-                    <span class="text-xs font-semibold">Pompa Air</span>
-                    <span id="relay5_status" class="text-xs font-bold text-slate-400">OFF</span>
+
+                <button onclick="toggleRelay(5)" id="relay5_btn" class="relay-card bg-slate-950/80 hover:bg-slate-800/60 border border-slate-800 p-4 rounded-xl transition-all duration-200 flex flex-col items-center gap-3 group">
+                    <div class="p-2.5 bg-slate-900 rounded-xl group-hover:bg-slate-800 transition border border-slate-800"><i data-lucide="droplet" class="w-5 h-5 text-slate-400 relay-icon"></i></div>
+                    <span class="text-xs font-medium text-slate-300">Pompa Air</span>
+                    <span id="relay5_status" class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded bg-slate-900 text-slate-500 border border-slate-800">OFF</span>
                 </button>
             </div>
         </div>
 
-        <!-- Section AI Assistant (Gemini) -->
-        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-md font-semibold text-slate-200 flex items-center gap-2">
-                    🤖 Energy Consultant AI
-                </h2>
-                <button onclick="analyzeEnergyWithAI()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2 rounded-lg font-medium transition shadow-lg shadow-indigo-600/20">
-                    Analisis Otomatis AI
+        <!-- GRID 3: Gemini Energy Consultant AI Integration -->
+        <div class="bg-gradient-to-b from-slate-900/90 to-slate-900/40 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400 border border-purple-500/20">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-semibold text-slate-200">Energy Consultant AI (Gemini 2.5)</h2>
+                        <p class="text-[11px] text-slate-400">Analisis penghematan daya & pemantauan otomatis</p>
+                    </div>
+                </div>
+
+                <button onclick="analyzeEnergyWithAI()" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 active:scale-[0.98] transition">
+                    <i data-lucide="bot" class="w-4 h-4"></i>
+                    <span>Analisis Otomatis AI</span>
                 </button>
             </div>
-            
-            <div id="ai_output" class="bg-slate-900/70 border border-slate-800 p-4 rounded-lg min-h-[100px] text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-                Klik tombol "Analisis Otomatis AI" untuk menerima rekomendasi pemakaian energi dari Gemini AI.
+
+            <div id="ai_output" class="bg-slate-950/70 border border-slate-800/80 p-4.5 rounded-xl min-h-[100px] text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
+                Klik tombol "Analisis Otomatis AI" di atas untuk menganalisis pemakaian daya listrik dan kondisi tangki air saat ini.
             </div>
         </div>
 
@@ -160,5 +255,8 @@
 
     <!-- App JavaScript -->
     <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>

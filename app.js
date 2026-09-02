@@ -74,35 +74,47 @@ function applyRolePermissions() {
 // 3. LOGIKA MQTT WEBSOCKETS
 // ==========================================
 function initMQTT() {
-    const clientID = "Web_Dashboard_" + Math.random().toString(16).substr(2, 8);
-    mqttClient = new Paho.MQTT.Client("broker.emqx.io", 8083, clientID);
+    // 1. Buat Client ID Unik agar tidak bentrok dengan MQTTX
+    const clientID = "Web_GithubPages_" + Math.floor(Math.random() * 100000);
+    
+    // 2. Gunakan Port 8084 untuk WSS (WebSocket Secure) & path /mqtt
+    mqttClient = new Paho.MQTT.Client("broker.emqx.io", 8084, "/mqtt", clientID);
 
     mqttClient.onConnectionLost = function(res) {
         console.warn("[MQTT] Connection Lost:", res.errorMessage);
         const statusEl = document.getElementById('mqttStatus');
-        statusEl.className = "flex items-center gap-2 text-xs text-red-400 font-semibold bg-red-950/40 border border-red-800/50 px-3 py-1 rounded-full";
-        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> Terputus`;
+        if (statusEl) {
+            statusEl.className = "flex items-center gap-2 text-xs text-red-400 font-semibold bg-red-950/40 border border-red-800/50 px-3 py-1 rounded-full";
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> Terputus`;
+        }
     };
 
     mqttClient.onMessageArrived = function(message) {
         try {
             const payload = JSON.parse(message.payloadString);
-            console.log("[MQTT Payload Arrived]:", payload);
+            console.log("[MQTT Data Masuk]:", payload);
             updateDashboard(payload);
         } catch (e) { 
-            console.error("[MQTT Error] Failed to parse JSON payload:", e); 
+            console.error("[MQTT Parse Error]:", e); 
         }
     };
 
+    // 3. Wajib Aktifkan useSSL: true
     mqttClient.connect({
         onSuccess: function() {
-            console.log("[MQTT] Connected successfully to broker.emqx.io");
+            console.log("[MQTT] Berhasil Terhubung via WSS!");
             const statusEl = document.getElementById('mqttStatus');
-            statusEl.className = "flex items-center gap-2 text-xs text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-800/50 px-3 py-1 rounded-full";
-            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Terhubung`;
+            if (statusEl) {
+                statusEl.className = "flex items-center gap-2 text-xs text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-800/50 px-3 py-1 rounded-full";
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Terhubung`;
+            }
             mqttClient.subscribe("smartbuilding/telemetry");
         },
-        useSSL: false
+        onFailure: function(err) {
+            console.error("[MQTT Connection Failed]:", err);
+        },
+        useSSL: true, // Wajib TRUE untuk HTTPS / GitHub Pages
+        keepAliveInterval: 30
     });
 }
 

@@ -1,20 +1,27 @@
-/* Custom CSS Extensions */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 body {
-    background-color: #0f172a;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Transisi UI */
-button {
-    transition: all 0.2s ease-in-out;
+/* Transisi Kartu Relay */
+.relay-card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Status Active Relay Styling */
+/* Status Active Relay (Glow Emerald) */
 .relay-active {
-    background-color: #059669 !important; /* Emerald 600 */
-    border-color: #10b981 !important;     /* Emerald 500 */
-    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.25);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.3) 100%) !important;
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.3);
 }
 
-.relay-active span {
+.relay-active .relay-icon {
+    color: #10b981 !important;
+}
+
+.relay-active span[id*="relay"] {
+    background-color: #059669 !important;
     color: #ffffff !important;
+    border-color: #10b981 !important;
 }
